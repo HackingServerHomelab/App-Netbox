@@ -1,0 +1,50 @@
+version: '3.7'
+services:
+  netbox:
+    image: linuxserver/netbox:latest
+    container_name: netbox
+    hostname: netbox
+    restart: unless-stopped
+    volumes:
+      - ../Data/netbox:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+      - SUPERUSER_EMAIL=admin
+      - SUPERUSER_PASSWORD=changeme
+      - ALLOWED_HOST=localhost
+      - DB_NAME=netbox
+      - DB_USER=netbox
+      - DB_PASSWORD=changeme
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    labels:
+      # Traefik Labels
+      - "traefik.enable=true"
+      # HTTPS Labels
+      - "traefik.http.routers.netbox.rule=Host(`localhost`)" # Domain Name
+      - "traefik.http.routers.netbox.entrypoints=web-secure"
+      - "traefik.http.routers.netbox.middlewares=referrer-headers@file,csrf@docker"
+      - "traefik.http.routers.netbox.service=netbox"
+      - "traefik.http.routers.netbox.tls=true"
+      - "traefik.http.services.netbox.loadbalancer.server.port=8000" # Proxied Port
+      - "traefik.http.middlewares.csrf.headers.customrequestheaders.Referer=value"
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    hostname: postgres
+    restart: unless-stopped
+    volumes:
+      - ../Data/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=netbox
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=netbox
+  redis:
+    image: redis:latest
+    container_name: redis
+    hostname: redis
+    restart: unless-stopped
